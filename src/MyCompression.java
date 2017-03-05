@@ -14,6 +14,17 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 
+
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.util.Random;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
 public class MyCompression {
 	int imageWidth = 352;
 	int imageHeight = 288;
@@ -26,13 +37,20 @@ public class MyCompression {
 		int color;
 		codebookVector nrstCV = null;
 	}
-	public codebookVector[] intializeCodebook(int n) {
+	public codebookVector[] intializeCodebook(int n, boolean isGrayScale) {
 		codebookVector[] codebooks = new codebookVector[n];
+		int boundary, colorDomain;
 		for(int i=0; i< codebooks.length; i++) {
 			codebooks[i] = new codebookVector();
 		}
-		int spaceInterval = (int) (255/Math.sqrt(n));
-		int origXpoint = (int) ((255/Math.sqrt(n)) * .5), xpoint= origXpoint, ypoint=xpoint;
+		if(isGrayScale) {
+			colorDomain = (int) Math.pow(2, 8);
+
+		}else{
+			colorDomain = (int) Math.pow(2, 24);
+		}
+		int spaceInterval = (int) (colorDomain/Math.sqrt(n));
+		int origXpoint = (int) ((colorDomain/Math.sqrt(n)) * .5), xpoint= origXpoint, ypoint=xpoint;
 		int col = 0;
 		codebookVector codebook;
 		for(int i=0; i< codebooks.length; i++) {
@@ -110,10 +128,11 @@ public class MyCompression {
 			y += pxl2.color;
 		}
 		if(pxlList.size() != 0) {
-			avgX = x/pxlList.size();
-			avgY = y/pxlList.size();
-		cv.xCoordinate = avgX;
-		cv.yCoordinate =avgY;
+			int pxlListSize = pxlList.size()/2; //each pair of pixels should be counted as 1 pixel vector
+			avgX = x/pxlListSize;
+			avgY = y/pxlListSize;
+			cv.xCoordinate = avgX;
+			cv.yCoordinate =avgY;
 		}
 		return cv;
 	}
@@ -121,33 +140,40 @@ public class MyCompression {
 		codebookVector cv;
 		Pixel pxl1, pxl2;
 		Pixel[] imageVP = file2vectorPxls(filename);
-		codebookVector[] codebook = intializeCodebook(n);
+		String filetype = filename.substring(filename.length() -3);
+		boolean isGrayScale = false;
+		if(filetype.equals("raw")) {
+			isGrayScale = true;
+		}
+		codebookVector[] codebook = intializeCodebook(n, isGrayScale);
 		HashMap<codebookVector, ArrayList<Pixel>> clusters = new HashMap<codebookVector, ArrayList<Pixel>>();
-		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;
-	//DONT FORGET TO ADD LOOP UNTIL GET CORRECT CV coordinates	
-		for(int i =0; i< codebook.length; i++) {
-			pxlList = new ArrayList<Pixel>();
-			clusters.put(codebook[i], pxlList);
+		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
+		for(int k = 0; k < 200; k++) {
+			for(int i =0; i< codebook.length; i++) {
+				pxlList = new ArrayList<Pixel>();
+				clusters.put(codebook[i], pxlList);
+			}
+			for(int i = 0; i<imageVP.length; i=i+2) {
+				pxl1 = imageVP[i];
+				pxl2 = imageVP[i+1];
+				cv = closest(pxl1, pxl2, codebook);
+				nrstPxls = clusters.get(cv);
+				pxl1.nrstCV = cv;
+				pxl2.nrstCV = cv;
+				nrstPxls.add(pxl1);
+				nrstPxls.add(pxl2);
+				clusters.put(cv, nrstPxls);
+			}
+			for(int i=0; i<codebook.length; i++) {
+				cv = codebook[i];
+				nrstPxls = clusters.get(cv);
+				cv = averagingNrstPxls(nrstPxls, cv);
+				codebook[i] = cv;
+			}
+			pxlList.clear();
+			nrstPxls.clear();
+			clusters.clear();
 		}
-		for(int i = 0; i<imageVP.length; i=i+2) {
-			pxl1 = imageVP[i];
-			pxl2 = imageVP[i+1];
-			cv = closest(pxl1, pxl2, codebook);
-			nrstPxls = clusters.get(cv);
-			pxl1.nrstCV = cv;
-			pxl2.nrstCV = cv;
-			nrstPxls.add(pxl1);
-			nrstPxls.add(pxl2);
-			clusters.put(cv, nrstPxls);
-		}
-		for(int i=0; i<codebook.length; i++) {
-			cv = codebook[i];
-			cv = averagingNrstPxls(clusters.get(cv), cv);
-			codebook[i] = cv;
-		}
-		pxlList.clear();
-		nrstPxls.clear();
-		clusters.clear();
 		
 		return codebook;
 	}
@@ -275,8 +301,7 @@ public class MyCompression {
 			}
 		}
 		return vectorPair;
-	}
-	public static void main(String[] args) {
+	}	public static void main(String[] args) {
 		//image size is 352x288
 		MyCompression test = new MyCompression();
 		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.raw";
