@@ -215,9 +215,6 @@ public class MyCompression {
 			pxl2 = itr.next();
 			x += pxl1.color;
 			y += pxl2.color;
-			if (x< 0 || y <0) {
-				System.out.println("test");
-			}
 		}
 		if(pxlList.size() != 0) {
 			avgX = (int) x/pxlListSize;
@@ -229,10 +226,9 @@ public class MyCompression {
 	}
 	
 	public codebookVector[] kMeanClustering(Pixel[] imageVP, int n) {
-		codebookVector cv, newCV, oldCV;
+		codebookVector cv, newCV, oldCV = new codebookVector();
 		Pixel pxl1, pxl2;
 		codebookVector[] codebook = intializeCodebook(n, isGrayScale);
-		codebookVector[] oldCodeBook;
 		double error = 2;
 		HashMap<codebookVector, ArrayList<Pixel>> clusters = new HashMap<codebookVector, ArrayList<Pixel>>();
   		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
@@ -252,20 +248,20 @@ public class MyCompression {
 				nrstPxls.add(pxl2);
 				clusters.put(cv, nrstPxls);
 			}
-			oldCodeBook = codebook.clone(); 
 			error = 0;
 			for(int i=0; i<codebook.length; i++) {
-				oldCV = codebook[i];
-				nrstPxls = clusters.get(oldCV);
-				newCV = averagingNrstPxls(nrstPxls, oldCV);
-				codebook[i] = newCV;
+				cv = codebook[i];
+				oldCV.xCoordinate = cv.xCoordinate;
+				oldCV.yCoordinate = cv.yCoordinate;
+				nrstPxls = clusters.get(cv);
+				newCV = averagingNrstPxls(nrstPxls, cv);
 				error += distance(oldCV.xCoordinate, newCV.xCoordinate, oldCV.yCoordinate, newCV.yCoordinate);
+				codebook[i] = newCV;
+	
 			}
-			
 			pxlList.clear();
 			nrstPxls.clear();
 			clusters.clear();
-			
 		}
 		return codebook;
 	}
