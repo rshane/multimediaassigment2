@@ -487,9 +487,12 @@ public class MyCompression {
 	}
 	public static void main(String[] args) {
 		//image size is 352x288
-		MyCompression test = new MyCompression();
-		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
-		test.compress(testFile, 16);
+		
+		MyCompression comp = new MyCompression();
+		String inputFile = args[0];
+		String number = args[1];
+		int n = Integer.parseInt(number);
+		comp.compress(inputFile, n);
 	}
 	
 }
