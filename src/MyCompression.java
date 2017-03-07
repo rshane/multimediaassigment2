@@ -167,6 +167,14 @@ public class MyCompression {
 		return imageVP;
 	}
 	
+	public double distance(int x1, int x2, int y1, int y2){
+		//square-root of (x-a)^2 + (y-b)^2
+		double value1 = Math.pow(x1 - x2, 2);
+		double value2 = Math.pow(y1 - y2, 2);
+		double dst = Math.sqrt(value1+value2);
+		return dst;
+	}
+	
 	public codebookVector closest(Pixel pxl1, Pixel pxl2, codebookVector[] cvArr) {
 		codebookVector cv, minCV=null;
 		double minDst = Double.MAX_VALUE;
@@ -221,12 +229,14 @@ public class MyCompression {
 	}
 	
 	public codebookVector[] kMeanClustering(Pixel[] imageVP, int n) {
-		codebookVector cv;
+		codebookVector cv, newCV, oldCV;
 		Pixel pxl1, pxl2;
 		codebookVector[] codebook = intializeCodebook(n, isGrayScale);
+		codebookVector[] oldCodeBook;
+		double error = 2;
 		HashMap<codebookVector, ArrayList<Pixel>> clusters = new HashMap<codebookVector, ArrayList<Pixel>>();
   		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
-		for(int k = 0; k < 100; k++) {
+		while(error >= 1){
 			for(int i =0; i< codebook.length; i++) {
 				pxlList = new ArrayList<Pixel>();
 				clusters.put(codebook[i], pxlList);
@@ -242,15 +252,20 @@ public class MyCompression {
 				nrstPxls.add(pxl2);
 				clusters.put(cv, nrstPxls);
 			}
+			oldCodeBook = codebook.clone(); 
+			error = 0;
 			for(int i=0; i<codebook.length; i++) {
-				cv = codebook[i];
-				nrstPxls = clusters.get(cv);
-				cv = averagingNrstPxls(nrstPxls, cv);
-				codebook[i] = cv;
+				oldCV = codebook[i];
+				nrstPxls = clusters.get(oldCV);
+				newCV = averagingNrstPxls(nrstPxls, oldCV);
+				codebook[i] = newCV;
+				error += distance(oldCV.xCoordinate, newCV.xCoordinate, oldCV.yCoordinate, newCV.yCoordinate);
 			}
+			
 			pxlList.clear();
 			nrstPxls.clear();
 			clusters.clear();
+			
 		}
 		return codebook;
 	}
@@ -477,7 +492,7 @@ public class MyCompression {
 	public static void main(String[] args) {
 		//image size is 352x288
 		MyCompression test = new MyCompression();
-		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.raw";
+		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
 		test.compress(testFile, 16);
 	}
 	
