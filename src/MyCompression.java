@@ -85,6 +85,17 @@ public class MyCompression {
 				return colors[1][0] <<16 | colors[1][1]  <<8| colors[1][2];
 			}
 		}
+		public void setPxl1Byte(String color, int value) {
+			if(color == "r") {
+				colors[0][0] = value;
+			} else if(color == "g") {
+				colors[0][1] = value;
+			} else {
+				colors[0][2] = value;
+			}
+			color1 = colors[0][0] <<16 | colors[0][1]  <<8| colors[0][2];
+		}
+		
 		public void setPxl1(String color, int value) {
 			if(color == "r") {
 				colors[0][0] = (value & 0x00ff0000) >> 16;
@@ -92,6 +103,17 @@ public class MyCompression {
 				colors[0][1] = (value & 0x0000ff00) >> 8;
 			} else {
 				colors[0][2] = value & 0x000000ff;
+			}
+			color1 = colors[0][0] <<16 | colors[0][1]  <<8| colors[0][2];
+		}
+		
+		public void setPxl2Byte(String color, int value) {
+			if(color == "r") {
+				colors[1][0] = value;
+			} else if(color == "g") {
+				colors[1][1] = value;
+			} else {
+				colors[1][2] = value;
 			}
 			color1 = colors[0][0] <<16 | colors[0][1]  <<8| colors[0][2];
 		}
@@ -308,26 +330,34 @@ public class MyCompression {
 	}
 	
 	public codebookVectorRGB averagingNrstPxlsRGB(ArrayList<Pixel> pxlList, codebookVectorRGB cv) {
-		int avgX, avgY;
-		double x =0, y=0;
+		int avgXR, avgXG, avgXB, avgYR, avgYG, avgYB;
+		double xR =0, xG =0, xB =0, yR=0, yG=0, yB=0;
 		Pixel pxl1, pxl2;
 		java.util.Iterator<Pixel> itr = pxlList.iterator();
 		int pxlListSize = pxlList.size()/2; //each pair of pixels should be counted as 1 pixel vector
 		while(itr.hasNext()){
 			pxl1 = itr.next();
 			pxl2 = itr.next();
-			x += pxl1.color;
-			y += pxl2.color;
+			xR += pxl1.getColor("r");
+			xG += pxl1.getColor("g");
+			xB += pxl1.getColor("b");
+			yR += pxl2.getColor("r");
+			yG += pxl2.getColor("g");
+			yB += pxl2.getColor("b");
 		}
 		if(pxlList.size() != 0) {
-			avgX = (int) (x/pxlListSize);
-			avgY = (int) (y/pxlListSize);
-			cv.setPxl1("r", avgX);
-			cv.setPxl1("g", avgX);
-			cv.setPxl1("b", avgX);
-			cv.setPxl2("r", avgY);
-			cv.setPxl2("g", avgY);
-			cv.setPxl2("b", avgY);
+			avgXR = (int) (xR/pxlListSize);
+			avgXG = (int) (xG/pxlListSize);
+			avgXB = (int) (xB/pxlListSize);
+			avgYR = (int) (yR/pxlListSize);
+			avgYG = (int) (yG/pxlListSize);
+			avgYB = (int) (yB/pxlListSize);
+			cv.setPxl1Byte("r", avgXR);
+			cv.setPxl1Byte("g", avgXG);
+			cv.setPxl1Byte("b", avgXB);
+			cv.setPxl2Byte("r", avgYR);
+			cv.setPxl2Byte("g", avgYG);
+			cv.setPxl2Byte("b", avgYB);
 		}
 		 return cv;
 	}
@@ -356,7 +386,7 @@ public class MyCompression {
 	public codebookVectorRGB[] kMeanClusteringRGB(Pixel[] imageVP, int n) {
 		codebookVectorRGB cv, newCV, oldCV = new codebookVectorRGB();
 		Pixel pxl1, pxl2;
-		codebookVectorRGB[] codebook = intializeCodebookRGB(n, imageVP, false);
+		codebookVectorRGB[] codebook = intializeCodebookRGB(n, imageVP, true);
 		double error = 2;
 		HashMap<codebookVectorRGB, ArrayList<Pixel>> clusters = new HashMap<codebookVectorRGB, ArrayList<Pixel>>();
   		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
@@ -384,14 +414,10 @@ public class MyCompression {
 				error += distanceBtwnCVs(oldCV, newCV);
 				codebook[i] = newCV;
 			}
-			loop++;
-			if(loop == 50 ) {
-				System.out.println("t");
-			}
 			pxlList.clear();
 			nrstPxls.clear();
 			clusters.clear();
-		
+			loop++;
 		}
 		return codebook;
 	}
@@ -446,7 +472,6 @@ public class MyCompression {
 
 		Pixel[] imageVP = new Pixel[imageWidth*imageHeight]; // change to times 3 if storing individually
 		byte[] inputBytes = RGBFile2Bytes(inputFile, imageWidth, imageHeight);
-		int ind = width*height, i =0;
 		for(int y = 0; y < height; y++){
 			for(int x = 0; x < width; x++){	
 				byte r = inputBytes[x + y*width];
@@ -512,7 +537,7 @@ public class MyCompression {
 				for (int x=0; x < imageWidth; x=x+2) {
 					pxl1.setColor(isGrayScale, origImage.getRGB(x, y));
 					pxl2.setColor(isGrayScale, origImage.getRGB(x + 1, y));
-					cvRGB = closestRGB(pxl1, pxl2, codebookRGB);
+					cvRGB = closestRGB(pxl1, pxl2, codebookRGB); //can create another hashmap storing closest vector
 					color1 = 0xff000000 | cvRGB.color1;
 					color2 = 0xff000000 | cvRGB.color2;
 					decompressedImg.setRGB(x, y, color1);
@@ -669,7 +694,7 @@ public class MyCompression {
 	}
 	public void test() {
 		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
-		int nTest = 16;
+		int nTest = 512;
 		compress(testFile, nTest);
 	}
 	public static void main(String[] args) {
