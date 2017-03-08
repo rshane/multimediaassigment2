@@ -176,32 +176,69 @@ public class MyCompression {
 		return codebooks;
 	}
 	
-	public codebookVectorRGB[] intializeCodebookRGB(int n, Pixel[] imageVP, boolean random) {
+	public codebookVectorRGB[] intializeCodebookRGB(int n, Pixel[] imageVP, boolean kmeanpp) {
 		codebookVectorRGB[] codebooks = new codebookVectorRGB[n];
 		int randomNum,r,g,b;
 		int pxl1, pxl2;
-		if (random) {
-			for(int i=0; i< codebooks.length; i++) {
-				randomNum = ThreadLocalRandom.current().nextInt(imageVP.length);
-				if((randomNum % 2) != 0) {
-					if(randomNum + 1 == (imageWidth*imageHeight)) {
-						randomNum = randomNum - 1;
-					}else {
-						randomNum =randomNum + 1;
+		Pixel pxlA = new Pixel(), pxlB = new Pixel();
+		if (kmeanpp) {
+			//randomly pick first codebook vector
+			randomNum = ThreadLocalRandom.current().nextInt(imageVP.length);
+			if((randomNum % 2) != 0) {
+				if(randomNum + 1 == (imageWidth*imageHeight)) {
+					randomNum = randomNum - 1;
+				}else {
+					randomNum =randomNum + 1;
+				}
+			}
+			codebookVectorRGB cvFirst = new codebookVectorRGB();
+			pxl1 = imageVP[randomNum].color;
+			pxl2 = imageVP[randomNum + 1].color;
+		
+			cvFirst.setPxl1("r", pxl1);
+			cvFirst.setPxl1("g", pxl1);
+			cvFirst.setPxl1("b", pxl1);
+		
+			cvFirst.setPxl2("r", pxl2);
+			cvFirst.setPxl2("g", pxl2);
+			cvFirst.setPxl2("b", pxl2);
+			codebooks[0] = cvFirst;
+			for(int c = 1; c < codebooks.length; c++) {
+				long sigma = 0;
+				double[] distArr = new double[imageVP.length/2];
+				for(int i =0; i<imageVP.length; i+=2) {
+					double dist;
+					pxlA = imageVP[i];
+					pxlB = imageVP[i + 1];
+					codebookVectorRGB cvI = closestRGB(pxlA, pxlB, codebooks);
+					dist = Math.pow(distanceRGB(cvI, pxlA, pxlB),2);
+					distArr[i/2] = Math.pow(dist, 2);
+					sigma += Math.pow(dist, 2);
+				}
+				long rNum = ThreadLocalRandom.current().nextLong(sigma);
+				double totalDist = 0;
+				for(int i =0; i <imageVP.length; i += 2) {
+					
+					totalDist = totalDist + distArr[i/2];
+					if (totalDist >= rNum) {
+						if (i == imageVP.length -1) {
+							i--;
+						}
+						codebookVectorRGB newCV = new codebookVectorRGB();
+						pxl1 = imageVP[i].color;
+						pxl2 = imageVP[i + 1].color;
+					
+						newCV.setPxl1("r", pxl1);
+						newCV.setPxl1("g", pxl1);
+						newCV.setPxl1("b", pxl1);
+					
+						newCV.setPxl2("r", pxl2);
+						newCV.setPxl2("g", pxl2);
+						newCV.setPxl2("b", pxl2);
+						codebooks[c] = newCV;
+						break;
 					}
 				}
-				codebookVectorRGB cv = new codebookVectorRGB();
-				pxl1 = imageVP[randomNum].color;
-				pxl2 = imageVP[randomNum + 1].color;
-			
-				cv.setPxl1("r", pxl1);
-				cv.setPxl1("g", pxl1);
-				cv.setPxl1("b", pxl1);
-			
-				cv.setPxl2("r", pxl2);
-				cv.setPxl2("g", pxl2);
-				cv.setPxl2("b", pxl2);
-				codebooks[i] = cv;
 			}
 		} else {
 			int colorDomain = (int) Math.pow(2, 24) - 1;
@@ -319,11 +356,13 @@ public class MyCompression {
 		codebookVectorRGB cv, minCV=null;
 		double minDst = Double.MAX_VALUE;
 		for(int i=0; i < cvArr.length; i++) {
-			cv = cvArr[i];
-			double dst = distanceRGB(cv, pxl1, pxl2);
-			if(dst < minDst) {
-				minDst =dst;
-				minCV =cv;
+			if (cvArr[i] != null) {
+				cv = cvArr[i];
+				double dst = distanceRGB(cv, pxl1, pxl2);
+				if(dst < minDst) {
+					minDst =dst;
+					minCV =cv;
+				}
 			}
 		}
 		return minCV;
@@ -391,7 +430,10 @@ public class MyCompression {
 		HashMap<codebookVectorRGB, ArrayList<Pixel>> clusters = new HashMap<codebookVectorRGB, ArrayList<Pixel>>();
   		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
   		int loop = 0;
-  		while(error >= 1 && loop < 100){
+  		while(error >= 1 && loop < 200){
+			pxlList.clear();
+			nrstPxls.clear();
+			clusters.clear();
 			for(int i =0; i< codebook.length; i++) {
 				pxlList = new ArrayList<Pixel>();
 				clusters.put(codebook[i], pxlList);
@@ -414,11 +456,10 @@ public class MyCompression {
 				error += distanceBtwnCVs(oldCV, newCV);
 				codebook[i] = newCV;
 			}
-			pxlList.clear();
-			nrstPxls.clear();
-			clusters.clear();
+
 			loop++;
 		}
+  		
 		return codebook;
 	}
 	
@@ -694,7 +735,7 @@ public class MyCompression {
 	}
 	public void test() {
 		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
-		int nTest = 512;
+		int nTest = 16;
 		compress(testFile, nTest);
 	}
 	public static void main(String[] args) {
