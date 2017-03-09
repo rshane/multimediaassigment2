@@ -350,19 +350,19 @@ public class MyCompression {
 		double totalDistance, distance1, distance2, distance1Squared, distance2Squared;
 		double redDist1, greenDist1, blueDist1, redDist2, greenDist2, blueDist2;
 		
-		redDist1 = Math.pow(cv1.getPxl1("r") - cv2.getPxl1("r"), 2);
-		greenDist1 = Math.pow(cv1.getPxl1("g") - cv2.getPxl1("g"), 2); 
-		blueDist1 = Math.pow(cv1.getPxl1("b") - cv2.getPxl1("b"), 2);
+		redDist1 = (cv1.getPxl1("r") - cv2.getPxl1("r")) * (cv1.getPxl1("r") - cv2.getPxl1("r"));
+		greenDist1 = (cv1.getPxl1("g") - cv2.getPxl1("g")) * (cv1.getPxl1("g") - cv2.getPxl1("g")); 
+		blueDist1 =(cv1.getPxl1("b") - cv2.getPxl1("b")) * (cv1.getPxl1("b") - cv2.getPxl1("b"));
 	
-		redDist2 = Math.pow(cv1.getPxl2("r") - cv2.getPxl2("r"), 2);
-		greenDist2 = Math.pow(cv1.getPxl2("g") - cv2.getPxl2("g"), 2); 
-		blueDist2 = Math.pow(cv1.getPxl2("b") - cv2.getPxl2("b"), 2);
+		redDist2 = (cv1.getPxl2("r") - cv2.getPxl2("r"))* (cv1.getPxl2("r") - cv2.getPxl2("r"));
+		greenDist2 = (cv1.getPxl2("g") - cv2.getPxl2("g")) * (cv1.getPxl2("g") - cv2.getPxl2("g")); 
+		blueDist2 = (cv1.getPxl2("b") - cv2.getPxl2("b")) * (cv1.getPxl2("b") - cv2.getPxl2("b"));
 
-		distance1 = Math.sqrt(redDist1 + greenDist1 + blueDist1);
-		distance2 = Math.sqrt(redDist2 + greenDist2 + blueDist2);
-		distance1Squared = Math.pow(distance1, 2);
-		distance2Squared = Math.pow(distance2, 2);
-		totalDistance = Math.sqrt(distance1Squared + distance2Squared);
+		distance1 = redDist1 + greenDist1 + blueDist1;
+		distance2 = redDist2 + greenDist2 + blueDist2;
+		//distance1Squared = Math.pow(distance1, 2);
+		//distance2Squared = Math.pow(distance2, 2);
+		totalDistance = distance1 + distance2;
 		return totalDistance;
 	}
 	
@@ -371,20 +371,20 @@ public class MyCompression {
 		double totalDistance, distance1, distance2, distance1Squared, distance2Squared;
 		double redDist1, greenDist1, blueDist1, redDist2, greenDist2, blueDist2;
 		
-		redDist1 = Math.pow(cv.getPxl1("r") - pxl1.getColor("r"), 2);
-		greenDist1 = Math.pow(cv.getPxl1("g") - pxl1.getColor("g"), 2); 
-		blueDist1 = Math.pow(cv.getPxl1("b") - pxl1.getColor("b"), 2);
+		redDist1 = (cv.getPxl1("r") - pxl1.getColor("r")) * (cv.getPxl1("r") - pxl1.getColor("r"));
+		greenDist1 = (cv.getPxl1("g") - pxl1.getColor("g"))*(cv.getPxl1("g") - pxl1.getColor("g")); 
+		blueDist1 = (cv.getPxl1("b") - pxl1.getColor("b"))*(cv.getPxl1("b") - pxl1.getColor("b"));
 		
-		redDist2 = Math.pow(cv.getPxl2("r") - pxl2.getColor("r"), 2);
-		greenDist2 = Math.pow(cv.getPxl2("g") - pxl2.getColor("g"), 2); 
-		blueDist2 = Math.pow(cv.getPxl2("b") - pxl2.getColor("b"), 2);
+		redDist2 = (cv.getPxl2("r") - pxl2.getColor("r")) *(cv.getPxl2("r") - pxl2.getColor("r")) ;
+		greenDist2 = (cv.getPxl2("g") - pxl2.getColor("g"))*(cv.getPxl2("g") - pxl2.getColor("g")); 
+		blueDist2 = (cv.getPxl2("b") - pxl2.getColor("b")) * (cv.getPxl2("b") - pxl2.getColor("b"));
 		
-		distance1 = Math.sqrt(redDist1 + greenDist1 + blueDist1);
-		distance2 = Math.sqrt(redDist2 + greenDist2 + blueDist2);
-		distance1Squared = Math.pow(distance1, 2);
-		distance2Squared = Math.pow(distance2, 2);
+		distance1 = redDist1 + greenDist1 + blueDist1;
+		distance2 = redDist2 + greenDist2 + blueDist2;
+		//distance1Squared = Math.pow(distance1, 2);
+		//distance2Squared = Math.pow(distance2, 2);
 		
-		totalDistance = Math.sqrt(distance1Squared + distance2Squared);
+		totalDistance = distance1 + distance2;
 		return totalDistance;
 	}
 	
@@ -803,23 +803,17 @@ public class MyCompression {
 		return true;
 	}
 	public void test() {
-		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image4.raw";
-		int nTest = 16;
+		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
+		int nTest = 500;
 		compress(testFile, nTest);
 	}
 	public static void main(String[] args) {
 		//image size is 352x288
 		MyCompression comp = new MyCompression();
-		boolean test = true;
-		if (test) {
-			System.out.println("This is a test");
-			comp.test();
-		}else {	
 			String inputFile = args[0];
 			String number = args[1];
 			int n = Integer.parseInt(number);
 			comp.compress(inputFile, n);
-		}
 	}
 	
 }
