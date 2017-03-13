@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -32,7 +33,7 @@ public class MyCompression {
 	int imageHeight = 288;
 	BufferedImage origImage = null;
 	boolean isGrayScale = false;
-	HashMap<Double,codebookVectorRGB> nrstCVs = null;
+	HashMap<Long,codebookVectorRGB> nrstCVs = null;
 	
 	public class codebookVector{
 		int xCoordinate;
@@ -115,7 +116,7 @@ public class MyCompression {
 			} else {
 				colors[1][2] = value;
 			}
-			color1 = colors[0][0] <<16 | colors[0][1]  <<8| colors[0][2];
+			color2 = colors[1][0] <<16 | colors[1][1]  <<8| colors[1][2];
 		}
 		public void setPxl2(String color, int value) {
 			if(color == "r") {
@@ -158,7 +159,9 @@ public class MyCompression {
 		Pixel pxlA, pxlB;
 		if(kmeanpp) {
 			//randomly pick first codebook vector
-			int randomNum = ThreadLocalRandom.current().nextInt(imageVP.length);
+			Random ranGen = new Random(03122017);
+			ranGen.setSeed(03122017);
+			int randomNum = ranGen.nextInt(imageVP.length);
 			if((randomNum % 2) != 0) {
 				if(randomNum + 1 == (imageWidth*imageHeight)) {
 					randomNum = randomNum - 1;
@@ -174,26 +177,23 @@ public class MyCompression {
 			cvFirst.yCoordinate = pxl2;
 			codebooks[0] = cvFirst;
 			for(int c = 1; c < codebooks.length; c++) {
-				long sigma = 0;
+				double sigma = 0;
 				double[] distArr = new double[imageVP.length/2];
 				for(int i =0; i<imageVP.length; i+=2) {
 					double dist;
 					pxlA = imageVP[i];
 					pxlB = imageVP[i + 1];
 					codebookVector cvI = closest(pxlA, pxlB, codebooks);
-					dist = Math.pow(distance(cvI.xCoordinate, pxlA.color, cvI.yCoordinate, pxlB.color),2);
-					distArr[i/2] = Math.pow(dist, 2);
-					sigma += Math.pow(dist, 2);
+					dist = distance(cvI.xCoordinate, pxlA.color, cvI.yCoordinate, pxlB.color);
+					distArr[i/2] = dist;
+					sigma += dist;
 				}
-				long rNum = ThreadLocalRandom.current().nextLong(sigma);
+				double rNum = ranGen.nextDouble() * sigma;
 				double totalDist = 0;
-				for(int i =0; i <imageVP.length; i += 2) {
+				for(int i =0; totalDist<rNum; i += 2) {
 					
 					totalDist = totalDist + distArr[i/2];
 					if (totalDist >= rNum) {
-						if (i == imageVP.length -1) {
-							i--;
-						}
 						codebookVector newCV = new codebookVector();
 						pxl1 = imageVP[i].color;
 						pxl2 = imageVP[i + 1].color;
@@ -201,7 +201,6 @@ public class MyCompression {
 						newCV.xCoordinate = pxl1;
 						newCV.yCoordinate = pxl2;
 						codebooks[c] = newCV;
-						break;
 					}
 				}
 			} 
@@ -210,20 +209,21 @@ public class MyCompression {
 				codebooks[i] = new codebookVector();
 			}
 			colorDomain = (int) Math.pow(2, 8) - 1;
-			int spaceInterval = (int) (colorDomain/Math.sqrt(n));
-			int origXpoint = (int) ((colorDomain/Math.sqrt(n)) * .5), xpoint= origXpoint, ypoint=xpoint;
+			int spaceInterval = (int) (colorDomain/n);
+			int origXpoint = (int) ((colorDomain/n) * .5), xpoint= origXpoint, ypoint=xpoint;
 			int col = 0;
 			codebookVector codebook;
 			for(int i=0; i< codebooks.length; i++) {
 				codebook = codebooks[i];
 				codebook.xCoordinate = xpoint;
-				codebook.yCoordinate = ypoint + spaceInterval * col;
-				if(xpoint + spaceInterval > colorDomain) {
-					xpoint = origXpoint;	
-					col++;
-				} else {
+				codebook.yCoordinate = xpoint;
+				//codebook.yCoordinate = ypoint + spaceInterval * col;
+				//if(xpoint + spaceInterval > colorDomain) {
+				//	xpoint = origXpoint;	
+				//	col++;
+			//	} else {
 					xpoint += spaceInterval;
-				}
+			//	}
 			}
 		}
 		return codebooks;
@@ -236,7 +236,9 @@ public class MyCompression {
 		Pixel pxlA = new Pixel(), pxlB = new Pixel();
 		if (kmeanpp) {
 			//randomly pick first codebook vector
-			randomNum = ThreadLocalRandom.current().nextInt(imageVP.length);
+			Random ranGen = new Random();
+			ranGen.setSeed(122921990);
+			randomNum = ranGen.nextInt(imageVP.length);
 			if((randomNum % 2) != 0) {
 				if(randomNum + 1 == (imageWidth*imageHeight)) {
 					randomNum = randomNum - 1;
@@ -257,18 +259,19 @@ public class MyCompression {
 			cvFirst.setPxl2("b", pxl2);
 			codebooks[0] = cvFirst;
 			for(int c = 1; c < codebooks.length; c++) {
-				long sigma = 0;
+				double sigma = 0;
 				double[] distArr = new double[imageVP.length/2];
 				for(int i =0; i<imageVP.length; i+=2) {
 					double dist;
 					pxlA = imageVP[i];
 					pxlB = imageVP[i + 1];
 					codebookVectorRGB cvI = closestRGB(pxlA, pxlB, codebooks);
-					dist = Math.pow(distanceRGB(cvI, pxlA, pxlB),2);
-					distArr[i/2] = Math.pow(dist, 2);
-					sigma += Math.pow(dist, 2);
+					dist = distanceRGB(cvI, pxlA, pxlB);
+					distArr[i/2] = dist;
+					sigma += dist;
 				}
-				long rNum = ThreadLocalRandom.current().nextLong(sigma);
+				double rNum = ranGen.nextDouble() * sigma;
+				//double rNum = ThreadLocalRandom.current().nextDouble(sigma);
 				double totalDist = 0;
 				for(int i =0; i <imageVP.length; i += 2) {
 					
@@ -294,28 +297,28 @@ public class MyCompression {
 				}
 			}
 		} else {
-			int colorDomain = (int) Math.pow(2, 24) - 1;
-			int spaceInterval = (int) (colorDomain/Math.sqrt(n));
-			int origXpoint = (int) ((colorDomain/Math.sqrt(n)) * .5), xpoint= origXpoint, ypoint=xpoint;
+			int colorDomain = (int) Math.pow(2, 8) - 1;
+			int spaceInterval = (int) (colorDomain/n);
+			int origXpoint = (int) (spaceInterval * .5), xpoint= origXpoint, ypoint;
 			int col = 0;
 			
 			for(int i=0; i< codebooks.length; i++) {
 				codebookVectorRGB cv = new codebookVectorRGB();
-				cv.setPxl1("r", xpoint);
-				cv.setPxl1("g", xpoint);
-				cv.setPxl1("b", xpoint);
+				cv.setPxl1Byte("r", xpoint);
+				cv.setPxl1Byte("g", xpoint);
+				cv.setPxl1Byte("b", xpoint);
 				
-				ypoint = origXpoint + spaceInterval * col;
-				cv.setPxl2("r", ypoint);
-				cv.setPxl2("g", ypoint);
-				cv.setPxl2("b", ypoint);
+				ypoint = xpoint;
+				cv.setPxl2Byte("r", ypoint);
+				cv.setPxl2Byte("g", ypoint);
+				cv.setPxl2Byte("b", ypoint);
 				codebooks[i] = cv;
-				if(xpoint + spaceInterval > colorDomain) {
-					xpoint = origXpoint;	
-					col++;
-				} else {
+			//	if(xpoint + spaceInterval > colorDomain) {
+			//		xpoint = origXpoint;	
+			//		col++;
+			//	} else {
 					xpoint += spaceInterval;
-				}
+			//	}
 			}
 			
 		}
@@ -360,15 +363,14 @@ public class MyCompression {
 
 		distance1 = redDist1 + greenDist1 + blueDist1;
 		distance2 = redDist2 + greenDist2 + blueDist2;
-		//distance1Squared = Math.pow(distance1, 2);
-		//distance2Squared = Math.pow(distance2, 2);
+		
 		totalDistance = distance1 + distance2;
 		return totalDistance;
 	}
 	
 	
 	public double distanceRGB(codebookVectorRGB cv, Pixel pxl1, Pixel pxl2) {
-		double totalDistance, distance1, distance2, distance1Squared, distance2Squared;
+		double totalDistance, distance1, distance2;
 		double redDist1, greenDist1, blueDist1, redDist2, greenDist2, blueDist2;
 		
 		redDist1 = (cv.getPxl1("r") - pxl1.getColor("r")) * (cv.getPxl1("r") - pxl1.getColor("r"));
@@ -381,8 +383,6 @@ public class MyCompression {
 		
 		distance1 = redDist1 + greenDist1 + blueDist1;
 		distance2 = redDist2 + greenDist2 + blueDist2;
-		//distance1Squared = Math.pow(distance1, 2);
-		//distance2Squared = Math.pow(distance2, 2);
 		
 		totalDistance = distance1 + distance2;
 		return totalDistance;
@@ -477,10 +477,13 @@ public class MyCompression {
 		return cv;
 	}
 	
-	public double cantorPairing(int p1Color, int p2Color) {
-		double cantorNum = .5*(p1Color + p2Color)*(p1Color+p2Color+1) + p2Color;
+	public long cantorPairing(int p1Color, int p2Color) {
+		long p1CLong = (long)(p1Color) << 32;
+		long p2CLong = (long)(p2Color);
+		long cantorNum = p1CLong | p2CLong;
 		return cantorNum;
 	}
+	
 	
 	public codebookVectorRGB[] kMeanClusteringRGB(Pixel[] imageVP, int n) {
 		codebookVectorRGB cv, newCV, oldCV = new codebookVectorRGB();
@@ -490,7 +493,7 @@ public class MyCompression {
 		HashMap<codebookVectorRGB, ArrayList<Pixel>> clusters = new HashMap<codebookVectorRGB, ArrayList<Pixel>>();
   		ArrayList<Pixel> pxlList = new ArrayList<Pixel>(), nrstPxls= new ArrayList<Pixel>() ;	
   		int loop = 0;
-  		while(error >= 1 && loop < 100){
+  		while(error > 0 && loop < 1000){
 			pxlList.clear();
 			nrstPxls.clear();
 			clusters.clear();
@@ -521,7 +524,7 @@ public class MyCompression {
 
 			loop++;
 		}
-  		nrstCVs = new HashMap<Double,codebookVectorRGB>();
+  		nrstCVs = new HashMap<Long,codebookVectorRGB>();
   		for(int i = 0; i< imageVP.length; i+=2) {
   			Pixel firstPxl = imageVP[i];
   			Pixel secPxl = imageVP[i+1];
@@ -589,25 +592,39 @@ public class MyCompression {
 				int pix = 0x00000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 				//int pix = ((a << 24) + (r << 16) + (g << 8) + b); bit shifting
 				img.setRGB(x,y,pix);
-				//Pixel pxlR = new Pixel(), pxlG = new Pixel(), pxlB = new Pixel() ;
-				//pxlR.color = r & 0xff;
-				//pxlG.color = g & 0xff;
-				//pxlB.color = b & 0xff;
+			
 				Pixel coloredPxl = new Pixel();
 				coloredPxl.color = pix;
 				imageVP[x + y*width] = coloredPxl;
-				//imageVP[x + y*width] = pxlR;
-				//imageVP[(x + y*width) + height*width] = pxlG;
-				//imageVP[(x + y*width) + 2*height*width] = pxlB;
-				//redPxls[i] = pxlR;
-				//greenPxls[i] = pxlG;
-				//bluePxls[i] = pxlB;
+				
 			}
 		}
 		origImage = img;
 		return imageVP;
 	}
 
+	public Pixel[] grayScale2imageVP(String filename) {
+		int width = imageWidth, height =imageHeight;
+		BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		File inputFile = new File(filename);
+
+		Pixel[] imageVP = new Pixel[imageWidth*imageHeight]; // change to times 3 if storing individually
+		byte[] inputBytes = RGBFile2Bytes(inputFile, imageWidth, imageHeight);
+		for(int y = 0; y < height; y++){
+			for(int x = 0; x < width; x++){	
+				byte r = inputBytes[x + y*width];
+				byte g = inputBytes[x + y*width];
+				byte b = inputBytes[x + y*width]; 
+				int pix = 0x00000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+				img.setRGB(x,y,pix);
+				Pixel grayPxl = new Pixel();
+				grayPxl.color = pix & 0x000000ff;
+				imageVP[x + y*width] = grayPxl;
+			}
+		}
+		origImage = img;
+		return imageVP;
+	}
 	public void compress(String filename, int n) {
 		String filetype = filename.substring(filename.length() -3);
 		Pixel[] imageVP = null;
@@ -617,7 +634,8 @@ public class MyCompression {
 			isGrayScale = true;
 		}
 		if(isGrayScale) {
-			imageVP= file2vectorPxls(filename);
+			//imageVP= file2vectorPxls(filename);
+			imageVP = grayScale2imageVP(filename);
 			codebook = kMeanClustering(imageVP, n);
 		}else {
 			imageVP= rgbBytes2imageVP(filename);
@@ -646,6 +664,7 @@ public class MyCompression {
 				for (int x=0; x < imageWidth; x=x+2) {
 					pxl1.setColor(isGrayScale, origImage.getRGB(x, y));
 					pxl2.setColor(isGrayScale, origImage.getRGB(x + 1, y));
+			
 					cvRGB = nrstCVs.get(cantorPairing(pxl1.color,pxl2.color));
 					//closestRGB(pxl1, pxl2, codebookRGB)
 					color1 = 0xff000000 | cvRGB.color1;
@@ -694,11 +713,9 @@ public class MyCompression {
 				int ind = width*height*frameIndex;
 				for(int y = 0; y < height; y++){
 					for(int x = 0; x < width; x++){			
-						byte a = 0;
 						byte r = bytes[ind];
 						int pix = 0x00000000 | ((r & 0xff) << 16) | ((r & 0xff) << 8) | (r & 0xff);
 						//int pix = ((a << 24) + (r << 16) + (g << 8) + b); bit shifting
-						//since only black and white either FFFFFF (white) or 000000 (black)
 						img.setRGB(x,y,pix);
 						ind++;
 					}
@@ -802,6 +819,7 @@ public class MyCompression {
 		}
 		return true;
 	}
+
 	public void test() {
 		String testFile = "/Users/shane/Documents/workspace/MyCompression/images/image1.rgb";
 		int nTest = 500;
